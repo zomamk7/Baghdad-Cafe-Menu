@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="ar">
+<head>
+  <meta charset="utf-8">
+  <title>Baghdad Café</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body { font-family: 'Arial', sans-serif; background: #f8fafd; margin:0; padding:0; direction: rtl; }
+    header { background: linear-gradient(135deg,#00aaff,#0066cc); color: white; padding: 20px; text-align:center; }
+    header h1 { margin:0; font-size: 28px; }
+    .logo { font-size: 18px; font-weight: bold; }
+    .container { padding:20px; max-width:800px; margin:auto; }
+    h2 { border-bottom:2px solid #eee; padding-bottom:5px; margin-top:30px; }
+    .item { display:flex; justify-content:space-between; align-items:center; padding:10px; border-bottom:1px solid #ddd; }
+    .item button { padding:5px 10px; background:#00aaff; color:white; border:none; border-radius:6px; cursor:pointer; }
+    .item button:hover { background:#0088cc; }
+    #cart { margin-top:30px; padding:15px; background:#eef6fb; border-radius:8px; }
+    #placeOrder { margin-top:15px; padding:10px 20px; background:#28a745; color:white; border:none; border-radius:8px; cursor:pointer; font-size:16px; }
+    #placeOrder:hover { background:#218838; }
+    #result { margin-top:15px; color:green; font-weight:bold; }
+    li button { margin: 0 3px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>☕ Baghdad Café</h1>
+    <div class="logo">مشروبات • سناكس • مثلجات</div>
+  </header>
+
+  <div class="container">
+    <h2>المشروبات</h2>
+    <div class="item">
+      <span>قهوة تركي</span>
+      <span>25 جنيه</span>
+      <button onclick="addToCart('Drinks','قهوة تركي',25)">+</button>
+    </div>
+    <div class="item">
+      <span>لاتيه</span>
+      <span>35 جنيه</span>
+      <button onclick="addToCart('Drinks','لاتيه',35)">+</button>
+    </div>
+
+    <h2>سناكس</h2>
+    <div class="item">
+      <span>ساندويتش جبنة</span>
+      <span>40 جنيه</span>
+      <button onclick="addToCart('Snacks','ساندويتش جبنة',40)">+</button>
+    </div>
+    <div class="item">
+      <span>شيبسي</span>
+      <span>15 جنيه</span>
+      <button onclick="addToCart('Snacks','شيبسي',15)">+</button>
+    </div>
+
+    <h2>مثلجات</h2>
+    <div class="item">
+      <span>آيس كريم فانيليا</span>
+      <span>30 جنيه</span>
+      <button onclick="addToCart('IceCream','آيس كريم فانيليا',30)">+</button>
+    </div>
+    <div class="item">
+      <span>آيس كريم شوكولاتة</span>
+      <span>30 جنيه</span>
+      <button onclick="addToCart('IceCream','آيس كريم شوكولاتة',30)">+</button>
+    </div>
+
+    <div id="cart">
+      <h3>🛒 عربة الطلب</h3>
+      <ul id="cartItems"></ul>
+      <p>الإجمالي: <span id="total">0</span> جنيه</p>
+      <button id="placeOrder" onclick="placeOrder()">إرسال الطلب</button>
+      <div id="result"></div>
+    </div>
+  </div>
+
+  <script>
+    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzlnyO2HyE_tInU2ZTHT63sN9kvfV-yZQyJ8IAF1QOnd4LflypFPQg7tRWb57nt1EtwjQ/exec"; 
+
+    let cart = [];
+
+    function addToCart(category, item, price) {
+      const existing = cart.find(c => c.item === item);
+      if (existing) {
+        existing.qty += 1;
+        existing.total = existing.qty * existing.price;
+      } else {
+        cart.push({category, item, price, qty:1, total:price});
+      }
+      renderCart();
+    }
+
+    function decreaseQty(item){
+      const existing = cart.find(c => c.item === item);
+      if(existing){
+        existing.qty -= 1;
+        if(existing.qty <= 0){
+          cart = cart.filter(c => c.item !== item);
+        } else {
+          existing.total = existing.qty * existing.price;
+        }
+        renderCart();
+      }
+    }
+
+    function renderCart(){
+      const ul = document.getElementById("cartItems");
+      ul.innerHTML = "";
+      let total = 0;
+      cart.forEach(c=>{
+        total += c.total;
+        let li = document.createElement("li");
+        li.innerHTML = `
+          ${c.item} - ${c.price} جنيه × ${c.qty} = ${c.total} جنيه
+          <button onclick="addToCart('${c.category}','${c.item}',${c.price})">+</button>
+          <button onclick="decreaseQty('${c.item}')">-</button>
+        `;
+        ul.appendChild(li);
+      });
+      document.getElementById("total").textContent = total;
+    }
+
+    async function placeOrder(){
+      if(cart.length===0){ alert("اختر صنف على الأقل"); return; }
+
+      try {
+        for(const c of cart){
+          const data = {
+            category: c.category,
+            item: c.item,
+            qty: c.qty,
+            total: c.total
+          };
+          const res = await fetch(WEB_APP_URL, {
+            method: "POST",
+            body: JSON.stringify(data)
+          });
+          const result = await res.json();
+          document.getElementById("result").textContent =
+            "✅ تم إرسال الطلب! رقم الطلب: " + result.orderId;
+        }
+      } catch (err){
+        document.getElementById("result").textContent =
+          "❌ فشل الاتصال بالخادم";
+      }
+
+      cart = [];
+      renderCart();
+    }
+  </script>
+</body>
+</html>
