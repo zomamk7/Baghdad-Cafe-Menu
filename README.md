@@ -1,2 +1,2 @@
-# Baghdad-Cafe-Menu
+Menu
 Menu for Baghdad Café
